@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(export PATH=\"$PATH:/opt/homebrew/bin:/usr/local/bin\")",
+      "Bash(find /opt /usr/local /usr/bin -name \"node\" -type f 2>/dev/null | head -5; find /Users/connormckenna -name \"node\" -maxdepth 6 -type f 2>/dev/null | head -5)"
+    ]
+  }
+}
