@@ -6,9 +6,12 @@ async function authHeaders() {
   return { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' };
 }
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 async function apiFetch(path, options = {}) {
+  const url = `${API_BASE}${path}`;
   const headers = await authHeaders();
-  const res = await fetch(path, { ...options, headers: { ...headers, ...options.headers } });
+  const res = await fetch(url, { ...options, headers: { ...headers, ...options.headers } });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `HTTP ${res.status}`);
