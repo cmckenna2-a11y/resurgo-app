@@ -38,6 +38,7 @@ app.use('/api/moods', require('./routes/moods'));
 app.use('/api/journals', require('./routes/journals'));
 app.use('/api/stories', require('./routes/stories'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/account', require('./routes/account'));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 

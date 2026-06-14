@@ -33,6 +33,9 @@ export const api = {
     approved: (situation) => apiFetch(`/api/stories/approved${situation ? `?situation=${situation}` : ''}`),
     submit: (data) => apiFetch('/api/stories', { method: 'POST', body: JSON.stringify(data) }),
   },
+  account: {
+    delete: () => apiFetch('/api/account', { method: 'DELETE' }),
+  },
   admin: {
     stats: () => apiFetch('/api/admin/stats'),
     moodTrend: () => apiFetch('/api/admin/mood-trend'),

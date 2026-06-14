@@ -44,6 +44,7 @@ export default function JournalTab() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [crisisDetected, setCrisisDetected] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
   const faithContent = getFaithContent(profile?.onboarding);
   const prompts = getPrompts(cat, faithContent);
@@ -64,6 +65,7 @@ export default function JournalTab() {
     }
 
     setSaving(true);
+    setSaveError(false);
     try {
       await api.journals.save({
         category: cat,
@@ -73,6 +75,7 @@ export default function JournalTab() {
       });
       setSaved(true);
     } catch {
+      setSaveError(true);
     } finally {
       setSaving(false);
     }
@@ -148,6 +151,11 @@ export default function JournalTab() {
             One thing I'm grateful for or a small win from today...
           </div>
           <textarea className="write-area" rows={2} placeholder="Even something tiny counts..." value={closerText} onChange={e => setCloserText(e.target.value)} />
+          {saveError && (
+            <div style={{ background: 'var(--red-bg)', color: 'var(--red-text)', borderRadius: 10, padding: '10px 14px', fontSize: 13, marginBottom: 10, lineHeight: 1.5 }}>
+              Couldn't save — check your connection and try again. Your writing is still here.
+            </div>
+          )}
           <button className="btn-full primary" onClick={saveJournal} disabled={saving || !entryText.trim()}>
             {saving ? 'Saving...' : 'Save entry'}
           </button>

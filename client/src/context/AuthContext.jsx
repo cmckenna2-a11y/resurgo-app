@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { api } from '../lib/api';
 
 const AuthContext = createContext(null);
 
@@ -82,9 +83,11 @@ export function AuthProvider({ children }) {
 
   async function deleteAccount() {
     if (!user) return;
-    // Delete profile cascades to all user data via FK
-    await supabase.from('profiles').delete().eq('id', user.id);
+    // Backend deletes all data AND the auth user (service role).
+    await api.account.delete();
     await supabase.auth.signOut();
+    setUser(null);
+    setProfile(null);
   }
 
   return (
