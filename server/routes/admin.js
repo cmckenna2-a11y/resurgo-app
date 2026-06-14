@@ -8,33 +8,39 @@ router.use(requireAuth, requireAdmin);
 // Overview stats
 router.get('/stats', async (req, res) => {
   const school = req.adminProfile.school;
-  const schoolFilter = school ? { school } : null;
 
   const now = new Date();
-  const day7 = new Date(now - 7 * 86400000).toISOString();
-  const day30 = new Date(now - 30 * 86400000).toISOString();
+  const day7 = new Date(now - 7 * 86400000).toISOString().split('T')[0];
   const today = now.toISOString().split('T')[0];
 
-  let profileQuery = supabase.from('profiles').select('id, role, school, created_at', { count: 'exact' }).neq('role', 'admin');
-  if (schoolFilter) profileQuery = profileQuery.eq('school', school);
-
-  const [profilesRes, activeRes, todayMoodsRes, journalRes, pendingStoriesRes] = await Promise.all([
-    profileQuery,
-    supabase.from('mood_entries').select('user_id', { count: 'exact' }).gte('created_at', day7),
-    supabase.from('mood_entries').select('id', { count: 'exact' }).eq('date', today),
-    supabase.from('journal_entries').select('id', { count: 'exact' }),
-    supabase.from('story_submissions').select('id', { count: 'exact' }).eq('status', 'pending'),
-  ]);
-
+  // Get this school's non-admin user IDs (or all if admin has no school)
+  let profileQuery = supabase.from('profiles').select('id, role, school').neq('role', 'admin');
+  if (school) profileQuery = profileQuery.eq('school', school);
+  const profilesRes = await profileQuery;
   const profiles = profilesRes.data || [];
+  const userIds = profiles.map(p => p.id);
+
   const students = profiles.filter(p => p.role === 'student').length;
   const athletes = profiles.filter(p => p.role === 'athlete').length;
 
-  // Unique active users in last 7 days
+  // If a school admin has zero users, short-circuit
+  if (school && userIds.length === 0) {
+    return res.json({ totalUsers: 0, students: 0, athletes: 0, activeUsers7d: 0, checkInsToday: 0, totalJournalEntries: 0, pendingStories: 0 });
+  }
+
+  const scope = (q) => (school ? q.in('user_id', userIds) : q);
+
+  const [activeRes, todayMoodsRes, journalRes, pendingStoriesRes] = await Promise.all([
+    scope(supabase.from('mood_entries').select('user_id').gte('date', day7)),
+    scope(supabase.from('mood_entries').select('id', { count: 'exact', head: true }).eq('date', today)),
+    scope(supabase.from('journal_entries').select('id', { count: 'exact', head: true })),
+    scope(supabase.from('story_submissions').select('id', { count: 'exact', head: true }).eq('status', 'pending')),
+  ]);
+
   const activeSet = new Set((activeRes.data || []).map(r => r.user_id));
 
   res.json({
-    totalUsers: profilesRes.count || 0,
+    totalUsers: profiles.length,
     students,
     athletes,
     activeUsers7d: activeSet.size,

@@ -23,8 +23,12 @@ router.post('/', requireAuth, async (req, res) => {
   if (!situation || !story || !helped || !advice) {
     return res.status(400).json({ error: 'All fields are required' });
   }
-  if (story.trim().split(/\s+/).filter(Boolean).length < 30) {
+  const wordCount = story.trim().split(/\s+/).filter(Boolean).length;
+  if (wordCount < 30) {
     return res.status(400).json({ error: 'Story must be at least 30 words' });
+  }
+  if (story.length > 5000 || advice.length > 2000 || helped.length > 2000) {
+    return res.status(400).json({ error: 'Submission is too long' });
   }
 
   const { data, error } = await supabase

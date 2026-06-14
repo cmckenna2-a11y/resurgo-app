@@ -1,14 +1,38 @@
 require('dotenv').config({ path: '../.env' });
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 
+const allowedOrigins = [
+  'capacitor://localhost',
+  'http://localhost',
+  'https://resurgomentalhealth.com',
+  'https://resurgo-app-phi.vercel.app',
+];
+if (process.env.CLIENT_URL) allowedOrigins.push(process.env.CLIENT_URL);
+
 app.use(cors({
-  origin: process.env.CLIENT_URL || '*',
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(null, false);
+  },
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: '100kb' }));
+
+const writeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, slow down.' },
+});
+app.use((req, res, next) => {
+  if (req.method === 'GET') return next();
+  return writeLimiter(req, res, next);
+});
 
 app.use('/api/moods', require('./routes/moods'));
 app.use('/api/journals', require('./routes/journals'));

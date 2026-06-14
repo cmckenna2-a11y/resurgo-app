@@ -19,8 +19,8 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const { mood, date } = req.body;
-  if (!mood || mood < 1 || mood > 5) {
-    return res.status(400).json({ error: 'mood must be 1-5' });
+  if (!Number.isInteger(mood) || mood < 1 || mood > 5) {
+    return res.status(400).json({ error: 'mood must be an integer 1-5' });
   }
 
   const { data, error } = await supabase
