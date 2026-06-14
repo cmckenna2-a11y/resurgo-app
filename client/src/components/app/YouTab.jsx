@@ -159,6 +159,11 @@ export default function YouTab({ active }) {
   const isAthlete = profile?.role === 'athlete';
   const ob = profile?.onboarding || {};
 
+  async function toggleRole() {
+    const newRole = isAthlete ? 'student' : 'athlete';
+    await updateProfile({ role: newRole });
+  }
+
   async function savePref(key, val) {
     const newOb = { ...ob, [key]: val };
     const school = key === 'college' ? (val[0] === 'Bates College' ? 'Bates College' : null) : profile?.school;
@@ -215,7 +220,10 @@ export default function YouTab({ active }) {
         <div className="profile-avatar-big">{initials}</div>
         <div>
           <div className="profile-name">{profile?.name}</div>
-          <div className="profile-role">{isAthlete ? 'Student athlete' : 'Student'}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+            <div className="profile-role">{isAthlete ? 'Student athlete' : 'Student'}</div>
+            <button onClick={toggleRole} style={{ fontSize: 11, color: 'var(--green-dark)', background: 'var(--green-pale)', border: '1px solid var(--green-light)', borderRadius: 20, padding: '2px 10px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>Switch</button>
+          </div>
           <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>{profile?.email}</div>
         </div>
       </div>

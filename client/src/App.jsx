@@ -1,12 +1,13 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { useAuth } from './context/AuthContext';
 import Landing from './components/Landing';
 import Login from './components/auth/Login';
 import Signup from './components/auth/Signup';
 import Forgot from './components/auth/Forgot';
-import Onboarding from './components/auth/Onboarding';
-import AppShell from './components/app/AppShell';
-import AdminDashboard from './components/admin/AdminDashboard';
+const AppShell = lazy(() => import('./components/app/AppShell'));
+const AdminDashboard = lazy(() => import('./components/admin/AdminDashboard'));
+const Onboarding = lazy(() => import('./components/auth/Onboarding'));
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -33,7 +34,10 @@ export default function App() {
     );
   }
 
+  const fallback = <div className="phone" style={{ alignItems: 'center', justifyContent: 'center', display: 'flex' }}><div style={{ color: '#aaa', fontSize: 14 }}>Loading...</div></div>;
+
   return (
+    <Suspense fallback={fallback}>
     <Routes>
       <Route path="/" element={
         !user ? <Landing /> :
@@ -51,5 +55,6 @@ export default function App() {
         <AdminRoute><AdminDashboard /></AdminRoute>
       } />
     </Routes>
+    </Suspense>
   );
 }

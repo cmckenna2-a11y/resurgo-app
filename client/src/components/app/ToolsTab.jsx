@@ -56,7 +56,7 @@ export default function ToolsTab() {
   if (activeTool) {
     return (
       <div style={{ position: 'absolute', inset: 0, background: '#fff', borderRadius: 24, zIndex: 10, overflowY: 'auto', padding: 16 }}>
-        <button onClick={() => setActiveTool(null)} style={{ background: 'none', border: 'none', color: '#888', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16 }}>← Back to tools</button>
+        <button onClick={() => setActiveTool(null)} style={{ background: 'none', border: 'none', color: '#888', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, paddingTop: 'var(--safe-top, 44px)', display: 'block' }}>← Back to tools</button>
         {TOOL_COMPONENTS[activeTool]}
       </div>
     );
