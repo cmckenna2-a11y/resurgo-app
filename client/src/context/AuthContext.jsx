@@ -16,21 +16,35 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
-    // getSession() handles initial load — always resolves loading regardless of outcome.
-    // onAuthStateChange handles subsequent auth changes (login, logout, token refresh).
-    // We skip INITIAL_SESSION in the change handler to avoid double-fetching the profile.
-    supabase.auth.getSession()
-      .then(async ({ data: { session } }) => {
+    let resolved = false;
+    const unblock = () => { if (!resolved) { resolved = true; setLoading(false); } };
+
+    // Hard safety net: on a cold start the Capacitor WebView network bridge
+    // can be slow to come up, and getSession() may hang without resolving or
+    // rejecting. This guarantees the app renders no matter what after 4s.
+    const failsafe = setTimeout(unblock, 4000);
+
+    async function init(attempt = 0) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           setUser(session.user);
           try { await fetchProfile(session.user.id); } catch {}
         }
-      })
-      .catch(() => {})            // swallow network errors on init
-      .finally(() => setLoading(false)); // always unblock the app
+        unblock();
+      } catch {
+        // Retry once — the first call can fire before the bridge is ready.
+        if (attempt < 1) {
+          setTimeout(() => init(attempt + 1), 600);
+        } else {
+          unblock();
+        }
+      }
+    }
+    init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'INITIAL_SESSION') return; // already handled by getSession above
+      if (event === 'INITIAL_SESSION') return; // already handled by init() above
       if (session) {
         setUser(session.user);
         try { await fetchProfile(session.user.id); } catch {}
@@ -38,9 +52,10 @@ export function AuthProvider({ children }) {
         setUser(null);
         setProfile(null);
       }
+      unblock();
     });
 
-    return () => subscription.unsubscribe();
+    return () => { clearTimeout(failsafe); subscription.unsubscribe(); };
   }, []);
 
   async function signup({ name, email, password, role }) {
