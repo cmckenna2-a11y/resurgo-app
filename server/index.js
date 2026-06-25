@@ -5,6 +5,10 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 
+// Behind Railway's proxy: trust the first hop so req.ip is the real client IP.
+// Without this, express-rate-limit buckets every user under the proxy IP.
+app.set('trust proxy', 1);
+
 const allowedOrigins = [
   'capacitor://localhost',
   'http://localhost',

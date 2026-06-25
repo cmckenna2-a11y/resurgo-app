@@ -138,8 +138,8 @@ export default function InjuryRecovery() {
       ))}
 
       <div style={{ background: '#FCEBEB', borderRadius: 12, padding: '12px 14px', marginTop: 8, fontSize: 12, color: '#A32D2D', lineHeight: 1.6 }}>
-        <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 13 }}>If you\'re struggling significantly</div>
-        Injury-related depression, anxiety, and identity loss are real clinical issues. Talk to your athletic trainer or campus counseling center. If you\'re in crisis, call or text <strong>988</strong>.
+        <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 13 }}>If you're struggling significantly</div>
+        Injury-related depression, anxiety, and identity loss are real clinical issues. Talk to your athletic trainer or campus counseling center. If you're in crisis, call or text <strong>988</strong>.
       </div>
     </>
   );

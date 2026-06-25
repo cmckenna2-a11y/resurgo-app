@@ -25,11 +25,13 @@ export default function StudyBreak() {
   const timerRef = useRef(null);
   const leftRef = useRef(STUDY_SECS);
   const modeRef = useRef('study');
+  const endRef = useRef(null);
 
   function tick() {
-    leftRef.current--;
-    setLeft(leftRef.current);
-    if (leftRef.current <= 0) {
+    const remaining = Math.max(0, Math.round((endRef.current - Date.now()) / 1000));
+    leftRef.current = remaining;
+    setLeft(remaining);
+    if (remaining <= 0) {
       clearInterval(timerRef.current);
       const nextMode = modeRef.current === 'study' ? 'break' : 'study';
       const nextSecs = nextMode === 'study' ? STUDY_SECS : BREAK_SECS;
@@ -48,7 +50,8 @@ export default function StudyBreak() {
       setRunning(false);
     } else {
       setRunning(true);
-      timerRef.current = setInterval(tick, 1000);
+      endRef.current = Date.now() + leftRef.current * 1000;
+      timerRef.current = setInterval(tick, 250);
     }
   }
 

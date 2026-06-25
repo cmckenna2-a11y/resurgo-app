@@ -58,7 +58,7 @@ export default function JournalTab() {
   }
 
   async function saveJournal() {
-    const lower = entryText.toLowerCase();
+    const lower = `${entryText} ${closerText}`.toLowerCase();
     if (CRISIS_WORDS.some(w => lower.includes(w))) {
       setCrisisDetected(true);
       return;

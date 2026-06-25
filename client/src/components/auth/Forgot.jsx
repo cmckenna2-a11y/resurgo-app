@@ -11,9 +11,14 @@ export default function Forgot() {
   async function handleSubmit() {
     if (!email) return;
     setLoading(true);
-    await supabase.auth.resetPasswordForEmail(email.trim());
-    setSent(true);
-    setLoading(false);
+    try {
+      await supabase.auth.resetPasswordForEmail(email.trim());
+      setSent(true);
+    } catch (e) {
+      // network failure — leave the form usable so they can retry
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

@@ -32,10 +32,10 @@ export default function Login() {
         <div className="auth-sub">Sign in to your Resurgo account</div>
 
         <label className="field-label">Email</label>
-        <input className="field" type="email" placeholder="you@university.edu" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+        <input className="field" type="email" placeholder="you@university.edu" value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && !loading && handleSubmit()} />
 
         <label className="field-label">Password</label>
-        <input className="field" type="password" placeholder="Your password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
+        <input className="field" type="password" placeholder="Your password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && !loading && handleSubmit()} />
 
         <button onClick={() => navigate('/forgot')} style={{ background: 'none', border: 'none', color: 'var(--green-dark)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10, textAlign: 'left', fontWeight: 600 }}>Forgot password?</button>
 

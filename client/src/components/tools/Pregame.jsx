@@ -27,6 +27,7 @@ export default function Pregame() {
   const [timerRunning, setTimerRunning] = useState(false);
   const timerRef = useRef(null);
   const leftRef = useRef(null);
+  const endRef = useRef(null);
 
   const step = STEPS[stepIdx];
   const progress = ((stepIdx) / STEPS.length) * 100;
@@ -35,14 +36,16 @@ export default function Pregame() {
     leftRef.current = secs;
     setTimerLeft(secs);
     setTimerRunning(true);
+    endRef.current = Date.now() + secs * 1000;
     timerRef.current = setInterval(() => {
-      leftRef.current--;
-      setTimerLeft(leftRef.current);
-      if (leftRef.current <= 0) {
+      const remaining = Math.max(0, Math.round((endRef.current - Date.now()) / 1000));
+      leftRef.current = remaining;
+      setTimerLeft(remaining);
+      if (remaining <= 0) {
         clearInterval(timerRef.current);
         setTimerRunning(false);
       }
-    }, 1000);
+    }, 250);
   }
 
   function stopTimer() {
@@ -127,7 +130,7 @@ export default function Pregame() {
           {timerLeft === 0 ? (
             <button className="btn-full primary" onClick={next}>Continue</button>
           ) : timerRunning ? (
-            <button className="btn-full" onClick={stopTimer}>Skip</button>
+            <button className="btn-full" onClick={() => { stopTimer(); next(); }}>Skip</button>
           ) : (
             <button className="btn-full primary" onClick={() => startTimer(step.duration)}>Start timer</button>
           )}

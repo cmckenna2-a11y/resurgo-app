@@ -2,6 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 
+// Returns YYYY-MM-DD in the user's LOCAL timezone (not UTC). Using
+// toISOString() rolled the "day" over at UTC midnight, which is early evening
+// in the US — causing the check-in day to flip hours before the user's actual
+// midnight. This computes the local calendar date instead.
+function localDateStr(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 const MOOD_MAP = { '😔': 1, '😐': 2, '🙂': 3, '😊': 4, '😁': 5 };
 const MOODS = [
   { emoji: '😔', label: 'rough', value: 1 },
@@ -64,14 +75,14 @@ export default function HomeTab({ active, onNavigate }) {
 
   // Check today's mood
   useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     const todayEntry = moodHistory.find(e => e.date === today);
     if (todayEntry) setSelectedMood(todayEntry.mood);
   }, [moodHistory]);
 
   async function selectMood(value) {
     setSelectedMood(value);
-    const today = new Date().toISOString().split('T')[0];
+    const today = localDateStr();
     try {
       await api.moods.save(value, today);
       const updated = await api.moods.list();
@@ -84,17 +95,17 @@ export default function HomeTab({ active, onNavigate }) {
         if (entry.mood === 1) roughStreak++;
         else break;
       }
-      if (roughStreak >= 2) setTimeout(() => setShowCrisis(true), 400);
+      if (roughStreak >= 3) setTimeout(() => setShowCrisis(true), 400);
     } catch {}
   }
 
   // Compute streak
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateStr();
   let streak = 0;
   for (let i = 0; i < 30; i++) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    const ds = d.toISOString().split('T')[0];
+    const ds = localDateStr(d);
     if (moodHistory.find(e => e.date === ds)) streak++;
     else break;
   }

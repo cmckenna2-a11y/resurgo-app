@@ -1,7 +1,13 @@
 import { supabase } from './supabase';
 
 async function authHeaders() {
-  const { data: { session } } = await supabase.auth.getSession();
+  // getSession() can hang on a stale token over a weak connection. Race it
+  // against a timeout so an API call fails fast instead of hanging forever.
+  const sessionResult = await Promise.race([
+    supabase.auth.getSession(),
+    new Promise((_, rej) => setTimeout(() => rej(new Error('Session timeout')), 8000)),
+  ]);
+  const session = sessionResult?.data?.session;
   if (!session) throw new Error('Not authenticated');
   return { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' };
 }
@@ -30,7 +36,7 @@ export const api = {
     delete: (id) => apiFetch(`/api/journals/${id}`, { method: 'DELETE' }),
   },
   stories: {
-    approved: (situation) => apiFetch(`/api/stories/approved${situation ? `?situation=${situation}` : ''}`),
+    approved: (situation) => apiFetch(`/api/stories/approved${situation ? `?situation=${encodeURIComponent(situation)}` : ''}`),
     submit: (data) => apiFetch('/api/stories', { method: 'POST', body: JSON.stringify(data) }),
   },
   account: {

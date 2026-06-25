@@ -81,7 +81,7 @@ function PeerSection() {
   return (
     <div>
       <div style={{ background: '#E1F5EE', borderRadius: 12, padding: '12px 14px', marginBottom: 14, fontSize: 13, color: '#085041', lineHeight: 1.5 }}>
-        These are real stories submitted by Resurgo users. Names are never collected — only shared experiences.
+        Stories from students and athletes who've been through it. Names are never collected — only shared experiences.
       </div>
       <div style={{ background: '#FCEBEB', borderRadius: 12, padding: '12px 14px', marginBottom: 14 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: '#A32D2D', marginBottom: 4 }}>Peer support — not therapy or clinical advice</div>
@@ -259,7 +259,7 @@ export default function ConnectTab() {
   return (
     <>
       <div className="section-label">Connect</div>
-      <div style={{ fontSize: 13, color: '#888', marginBottom: 14, lineHeight: 1.5 }}>Real stories from real people. Share yours to help someone else.</div>
+      <div style={{ fontSize: 13, color: '#888', marginBottom: 14, lineHeight: 1.5 }}>Stories from people who've been through it. Share yours to help someone else.</div>
       <div className="cat-row">
         {SECTIONS.map(s => (
           <button key={s.id} className={`cat-btn ${s.cls}${section === s.id ? ' active' : ''}`} onClick={() => setSection(s.id)}>{s.label}</button>

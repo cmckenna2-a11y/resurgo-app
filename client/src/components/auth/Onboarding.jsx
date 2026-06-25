@@ -46,15 +46,25 @@ export default function Onboarding() {
     }
   }
 
+  const [saving, setSaving] = useState(false);
+
   async function next() {
     if (step < steps.length - 1) {
       setStep(s => s + 1);
-    } else {
-      // Save onboarding answers and school to profile
-      const school = answers.college?.[0] === 'Bates College' ? 'Bates College' : null;
-      await updateProfile({ onboarding: answers, school });
-      navigate('/');
+      return;
     }
+    // Final step: save, but never let a hung/failed save trap the user.
+    setSaving(true);
+    const school = answers.college?.[0] === 'Bates College' ? 'Bates College' : null;
+    try {
+      await Promise.race([
+        updateProfile({ onboarding: answers, school }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000)),
+      ]);
+    } catch {
+      // Save will retry in the background via context; still let them in.
+    }
+    navigate('/', { replace: true });
   }
 
   if (!current) return null;

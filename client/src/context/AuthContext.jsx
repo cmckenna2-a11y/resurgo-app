@@ -22,14 +22,18 @@ export function AuthProvider({ children }) {
     // Hard safety net: on a cold start the Capacitor WebView network bridge
     // can be slow to come up, and getSession() may hang without resolving or
     // rejecting. This guarantees the app renders no matter what after 4s.
-    const failsafe = setTimeout(unblock, 4000);
+    const failsafe = setTimeout(unblock, 3000);
 
     async function init(attempt = 0) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
           setUser(session.user);
-          try { await fetchProfile(session.user.id); } catch {}
+          // Unblock the UI immediately once we have a session. The profile
+          // fetch is a network call that can hang on a weak cold-start
+          // connection, so we do NOT await it before rendering. It loads in
+          // the background and updates state when it returns.
+          fetchProfile(session.user.id).catch(() => {});
         }
         unblock();
       } catch {

@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 
+function localDateStr(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function getInitials(name = '') {
   return name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
@@ -33,7 +40,7 @@ function MoodHistoryChart({ history }) {
   const slots = Array.from({ length: days }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - (days - 1 - i));
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = localDateStr(d);
     const entry = history.find(e => e.date === dateStr);
     return { date: dateStr, mood: entry?.mood ?? null, dayNum: d.getDate() };
   });
@@ -173,7 +180,11 @@ export default function YouTab({ active }) {
 
   async function handleDelete() {
     setDeleting(true);
-    await deleteAccount();
+    try {
+      await deleteAccount();
+    } finally {
+      setDeleting(false);
+    }
   }
 
   const prefRows = [
