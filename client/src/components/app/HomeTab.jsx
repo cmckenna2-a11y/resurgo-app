@@ -73,6 +73,18 @@ export default function HomeTab({ active, onNavigate }) {
     if (active) fetchHistory();
   }, [active, fetchHistory]);
 
+  // Re-fetch when the app comes back to the foreground (e.g. opened the next
+  // morning after iOS suspended it). Without this, `today` is still yesterday's
+  // date and the mood history is stale until the user manually navigates away
+  // and back.
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible' && active) fetchHistory();
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [active, fetchHistory]);
+
   // Check today's mood
   useEffect(() => {
     const today = localDateStr();

@@ -21,12 +21,12 @@ router.delete('/', async (req, res) => {
     ];
     for (const [table, col] of tables) {
       const { error } = await supabase.from(table).delete().eq(col, userId);
-      if (error) return res.status(500).json({ error: `Failed to delete ${table}: ${error.message}` });
+      if (error) return res.status(500).json({ error: 'Account deletion failed. Please try again.' });
     }
 
     // Delete the actual auth user (requires service role key)
     const { error } = await supabase.auth.admin.deleteUser(userId);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return res.status(500).json({ error: 'Account deletion failed. Please try again.' });
 
     res.json({ success: true });
   } catch (e) {

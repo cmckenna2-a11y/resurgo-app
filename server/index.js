@@ -33,8 +33,15 @@ const writeLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many requests, slow down.' },
 });
+const readLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, slow down.' },
+});
 app.use((req, res, next) => {
-  if (req.method === 'GET') return next();
+  if (req.method === 'GET') return readLimiter(req, res, next);
   return writeLimiter(req, res, next);
 });
 

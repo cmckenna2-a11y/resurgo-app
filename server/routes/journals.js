@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
     .order('created_at', { ascending: false })
     .limit(50);
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return res.status(500).json({ error: 'Failed to fetch entries' });
   res.json(data);
 });
 
@@ -29,18 +29,21 @@ router.post('/', async (req, res) => {
     .select()
     .single();
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return res.status(500).json({ error: 'Failed to save entry' });
   res.json(data);
 });
 
 router.delete('/:id', async (req, res) => {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('journal_entries')
     .delete()
     .eq('id', req.params.id)
-    .eq('user_id', req.user.id);
+    .eq('user_id', req.user.id)
+    .select('id')
+    .single();
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error?.code === 'PGRST116') return res.status(404).json({ error: 'Entry not found' });
+  if (error) return res.status(500).json({ error: 'Failed to delete entry' });
   res.json({ success: true });
 });
 
