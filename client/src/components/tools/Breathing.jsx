@@ -27,6 +27,7 @@ export default function Breathing() {
   const timerRef = useRef(null);
   const phaseRef = useRef(0);
   const cycleRef = useRef(0);
+  const mountedRef = useRef(true);
 
   function reset() {
     clearInterval(timerRef.current);
@@ -39,15 +40,19 @@ export default function Breathing() {
 
   function startPhase() {
     const ph = PHASES[phaseRef.current];
-    let elapsed = 0;
     setLabel(ph.name);
     setSub(ph.sub);
     setCount(ph.dur);
     setRingColor(ph.color);
     setOffset(CIRC);
 
+    // Timestamp-based: iOS pauses timers while the app is backgrounded, so
+    // counting interval ticks would freeze the exercise. Deriving elapsed
+    // time from the clock keeps it correct after a suspend/resume.
+    const startedAt = Date.now();
     timerRef.current = setInterval(() => {
-      elapsed++;
+      if (!mountedRef.current) { clearInterval(timerRef.current); return; }
+      const elapsed = Math.min(ph.dur, Math.floor((Date.now() - startedAt) / 1000));
       setCount(elapsed < ph.dur ? ph.dur - elapsed : '');
       setOffset(CIRC * (1 - elapsed / ph.dur));
 
@@ -75,7 +80,7 @@ export default function Breathing() {
         }
         startPhase();
       }
-    }, 1000);
+    }, 250);
   }
 
   function toggle() {
@@ -90,7 +95,7 @@ export default function Breathing() {
     }
   }
 
-  useEffect(() => () => clearInterval(timerRef.current), []);
+  useEffect(() => () => { mountedRef.current = false; clearInterval(timerRef.current); }, []);
 
   return (
     <>
@@ -108,7 +113,7 @@ export default function Breathing() {
           <svg width="180" height="180" style={{ position: 'absolute', inset: 0, transform: 'rotate(-90deg)' }}>
             <circle cx="90" cy="90" r="84" fill="none" stroke={ringColor} strokeWidth="4"
               strokeDasharray={CIRC} strokeDashoffset={offset} strokeLinecap="round"
-              style={{ transition: running ? 'stroke-dashoffset 1s linear' : 'none' }} />
+              style={{ transition: running ? 'stroke-dashoffset 1s linear' : 'none', willChange: 'stroke-dashoffset' }} />
           </svg>
           <div className="count-display">{count}</div>
         </div>

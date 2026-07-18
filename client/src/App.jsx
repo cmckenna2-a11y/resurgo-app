@@ -43,7 +43,7 @@ export default function App() {
         !user ? <Landing /> :
         !profile ? fallback :
         profile?.role === 'admin' ? <Navigate to="/admin" replace /> :
-        !profile?.onboarding?.struggle ? <Navigate to="/onboarding" replace /> :
+        !profile?.onboarding?.struggle && !profile?.onboarding?.skipped ? <Navigate to="/onboarding" replace /> :
         <AppShell />
       } />
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />

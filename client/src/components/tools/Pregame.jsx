@@ -45,7 +45,7 @@ export default function Pregame() {
         clearInterval(timerRef.current);
         setTimerRunning(false);
       }
-    }, 250);
+    }, 1000);
   }
 
   function stopTimer() {

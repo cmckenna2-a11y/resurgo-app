@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, AUTH_STORAGE_KEY } from '../lib/supabase';
-import { api } from '../lib/api';
+import { api, clearApiCache } from '../lib/api';
 
 const PROFILE_CACHE_KEY = 'resurgo-profile';
 
@@ -126,6 +126,9 @@ export function AuthProvider({ children }) {
       if (event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') return;
       // Cancel any in-flight init() so a concurrent logout isn't overwritten.
       if (event === 'SIGNED_OUT') initCancelled = true;
+      // The signed-in user changed — drop any cached API data so the next
+      // user never sees the previous user's mood history.
+      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN') clearApiCache();
       if (session) {
         setUser(session.user);
         try { await fetchProfile(session.user.id); } catch {}
@@ -160,6 +163,7 @@ export function AuthProvider({ children }) {
 
   async function logout() {
     await supabase.auth.signOut();
+    clearApiCache();
     setUser(null);
     setProfile(null);
     try { window.localStorage.removeItem(PROFILE_CACHE_KEY); } catch {}

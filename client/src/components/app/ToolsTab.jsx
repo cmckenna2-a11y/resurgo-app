@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { COLLEGE_RESOURCES } from '../../data/collegeResources';
 import Breathing from '../tools/Breathing';
 import StudyBreak from '../tools/StudyBreak';
 import Burnout from '../tools/Burnout';
@@ -14,15 +15,16 @@ const DISCLAIMER = (
   </div>
 );
 
-const COLLEGE_RESOURCES = {
-  'Bates College': {
-    name: 'Bates College', color: '#8B0000',
-    resources: [
-      { title: 'CAPS — Counseling & Psychological Services', sub: 'Free confidential counseling', url: 'https://www.bates.edu/counseling-psychological-services/', icon: '🧠' },
-      { title: 'Student Well-Being at Bates', sub: 'Wellness programs and holistic health support', url: 'https://www.bates.edu/well-being/', icon: '🌿' },
-      { title: 'Here to Help — Confidential Support', sub: 'Full list of confidential resources at Bates', url: 'https://www.bates.edu/here-to-help/confidential-non-confidential-support/', icon: '👥' },
-    ],
-  },
+// Render functions instead of pre-built JSX elements — tools are only
+// instantiated when the user actually opens them, not on every ToolsTab render.
+const TOOL_RENDERERS = {
+  breathe: () => <><Breathing />{DISCLAIMER}</>,
+  break: () => <><StudyBreak />{DISCLAIMER}</>,
+  burnout: () => <><Burnout />{DISCLAIMER}</>,
+  stress: () => <><StressType />{DISCLAIMER}</>,
+  exam: () => <><ExamToolkit />{DISCLAIMER}</>,
+  pregame: () => <><Pregame />{DISCLAIMER}</>,
+  injury: () => <><InjuryRecovery />{DISCLAIMER}</>,
 };
 
 export default function ToolsTab() {
@@ -31,7 +33,7 @@ export default function ToolsTab() {
   const isAthlete = profile?.role === 'athlete';
   const school = COLLEGE_RESOURCES[profile?.school];
 
-  const TOOLS = [
+  const TOOLS = useMemo(() => [
     { id: 'breathe', icon: '🌿', bg: '#E1F5EE', title: '4-7-8 breathing', sub: 'Calm your nervous system in 3 minutes' },
     { id: 'break', icon: '⏱', bg: '#EEEDFE', title: 'Study break timer', sub: '45 min focus, 5 min reset' },
     { id: 'burnout', icon: '🟢', bg: '#FAEEDA', title: 'Burnout check-in', sub: 'See where your mental energy really is' },
@@ -41,23 +43,13 @@ export default function ToolsTab() {
       { id: 'pregame', icon: '🏆', bg: '#EEEDFE', title: 'Pre-game mental prep', sub: 'Faith-personalized 6-step routine' },
       { id: 'injury', icon: '🏥', bg: '#FAECE7', title: 'Injury recovery', sub: 'Mental support for your recovery journey' },
     ] : []),
-  ];
-
-  const TOOL_COMPONENTS = {
-    breathe: <><Breathing />{DISCLAIMER}</>,
-    break: <><StudyBreak />{DISCLAIMER}</>,
-    burnout: <><Burnout />{DISCLAIMER}</>,
-    stress: <><StressType />{DISCLAIMER}</>,
-    exam: <><ExamToolkit />{DISCLAIMER}</>,
-    pregame: <><Pregame />{DISCLAIMER}</>,
-    injury: <><InjuryRecovery />{DISCLAIMER}</>,
-  };
+  ], [isAthlete]);
 
   if (activeTool) {
     return (
       <div style={{ position: 'absolute', inset: 0, background: '#fff', borderRadius: 24, zIndex: 10, overflowY: 'auto', padding: 16 }}>
         <button onClick={() => setActiveTool(null)} style={{ background: 'none', border: 'none', color: '#888', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16, paddingTop: 'var(--safe-top, 44px)', display: 'block' }}>← Back to tools</button>
-        {TOOL_COMPONENTS[activeTool]}
+        {TOOL_RENDERERS[activeTool]?.()}
       </div>
     );
   }

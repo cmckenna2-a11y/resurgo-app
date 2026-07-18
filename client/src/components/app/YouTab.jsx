@@ -1,13 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
-
-function localDateStr(d = new Date()) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
+import { localDateStr } from '../../lib/dates';
 
 function getInitials(name = '') {
   return name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
@@ -26,32 +20,36 @@ const PREF_META = {
 const MOOD_LABELS = { 1: 'Rough', 2: 'Meh', 3: 'Okay', 4: 'Good', 5: 'Great' };
 const MOOD_COLORS = { 1: '#F09595', 2: '#FAC775', 3: '#B5D4F4', 4: '#9FE1CB', 5: '#5DCAA5' };
 
-function MoodHistoryChart({ history }) {
+const MoodHistoryChart = memo(function MoodHistoryChart({ history }) {
+  const slots = useMemo(() => {
+    const days = 30;
+    const today = new Date();
+    return Array.from({ length: days }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() - (days - 1 - i));
+      const dateStr = localDateStr(d);
+      const entry = history.find(e => e.date === dateStr);
+      return { date: dateStr, mood: entry?.mood ?? null, dayNum: d.getDate() };
+    });
+  }, [history]);
+
+  const { avg, streak } = useMemo(() => {
+    const filled = slots.filter(s => s.mood !== null);
+    const avg = filled.length ? (filled.reduce((a, s) => a + s.mood, 0) / filled.length).toFixed(1) : null;
+    let streak = 0;
+    for (let i = slots.length - 1; i >= 0; i--) {
+      if (slots[i].mood !== null) streak++;
+      else break;
+    }
+    return { avg, streak };
+  }, [slots]);
+
   if (!history.length) {
     return (
       <div style={{ background: '#f9f9f7', borderRadius: 12, padding: 16, textAlign: 'center' }}>
         <div style={{ fontSize: 13, color: '#aaa', lineHeight: 1.6 }}>No check-ins yet.<br />Start by selecting your mood on the home screen each day.</div>
       </div>
     );
-  }
-
-  const days = 30;
-  const today = new Date();
-  const slots = Array.from({ length: days }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - (days - 1 - i));
-    const dateStr = localDateStr(d);
-    const entry = history.find(e => e.date === dateStr);
-    return { date: dateStr, mood: entry?.mood ?? null, dayNum: d.getDate() };
-  });
-
-  const filled = slots.filter(s => s.mood !== null);
-  const avg = filled.length ? (filled.reduce((a, s) => a + s.mood, 0) / filled.length).toFixed(1) : null;
-
-  let streak = 0;
-  for (let i = slots.length - 1; i >= 0; i--) {
-    if (slots[i].mood !== null) streak++;
-    else break;
   }
 
   return (
@@ -82,7 +80,7 @@ function MoodHistoryChart({ history }) {
       <div style={{ fontSize: 11, color: '#aaa', textAlign: 'center' }}>Last 14 days</div>
     </div>
   );
-}
+});
 
 function PrefEditor({ prefKey, onClose, onSave }) {
   const { profile } = useAuth();
@@ -150,6 +148,8 @@ export default function YouTab({ active }) {
   const [showLegal, setShowLegal] = useState(null);
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -162,26 +162,40 @@ export default function YouTab({ active }) {
     if (active) fetchHistory();
   }, [active, fetchHistory]);
 
-  const initials = getInitials(profile?.name);
+  const initials = useMemo(() => getInitials(profile?.name), [profile?.name]);
   const isAthlete = profile?.role === 'athlete';
   const ob = profile?.onboarding || {};
 
   async function toggleRole() {
+    setSaveError(false);
     const newRole = isAthlete ? 'student' : 'athlete';
-    await updateProfile({ role: newRole });
+    try {
+      await updateProfile({ role: newRole });
+    } catch {
+      setSaveError(true);
+    }
   }
 
   async function savePref(key, val) {
+    setSaveError(false);
     const newOb = { ...ob, [key]: val };
     const school = key === 'college' ? (val[0] === 'Bates College' ? 'Bates College' : null) : profile?.school;
-    await updateProfile({ onboarding: newOb, school });
-    setEditingPref(null);
+    try {
+      await updateProfile({ onboarding: newOb, school });
+      setEditingPref(null);
+    } catch {
+      setSaveError(true);
+      setEditingPref(null);
+    }
   }
 
   async function handleDelete() {
     setDeleting(true);
+    setDeleteError(false);
     try {
       await deleteAccount();
+    } catch {
+      setDeleteError(true);
     } finally {
       setDeleting(false);
     }
@@ -220,6 +234,7 @@ export default function YouTab({ active }) {
           <div style={{ background: '#fff', borderRadius: 16, padding: 24, width: '100%' }}>
             <div style={{ fontSize: 18, fontWeight: 600, color: '#1a1a1a', marginBottom: 8 }}>Delete your account?</div>
             <div style={{ fontSize: 13, color: '#888', marginBottom: 20, lineHeight: 1.6 }}>This will permanently delete your account, mood history, journal entries, and all saved data. This cannot be undone.</div>
+            {deleteError && <div style={{ fontSize: 12, color: '#A32D2D', marginBottom: 10 }}>Deletion failed — check your connection and try again.</div>}
             <button onClick={handleDelete} disabled={deleting} style={{ width: '100%', padding: 12, borderRadius: 10, border: 'none', background: '#A32D2D', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 10 }}>{deleting ? 'Deleting...' : 'Yes, delete everything'}</button>
             <button onClick={() => setShowDelete(false)} style={{ width: '100%', padding: 12, borderRadius: 10, border: '1px solid #e5e5e0', background: 'none', color: '#888', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}>Cancel</button>
           </div>
@@ -245,6 +260,11 @@ export default function YouTab({ active }) {
       <div className="divider" />
       <div className="section-label">Settings & preferences</div>
       <div style={{ fontSize: 13, color: '#888', marginBottom: 14 }}>Your answers shape everything in the app. Update them anytime.</div>
+      {saveError && (
+        <div style={{ background: 'var(--red-bg, #FCEBEB)', color: 'var(--red-text, #A32D2D)', borderRadius: 10, padding: '10px 14px', fontSize: 13, marginBottom: 12 }}>
+          Couldn't save your change — check your connection and try again.
+        </div>
+      )}
 
       {prefRows.map(row => (
         <div key={row.key} className="pref-row" onClick={() => setEditingPref(row.key)}>

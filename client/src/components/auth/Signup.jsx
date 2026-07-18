@@ -17,7 +17,7 @@ export default function Signup() {
     setError('');
     if (!name.trim()) return setError('Please enter your name.');
     if (!email.includes('@')) return setError('Please enter a valid email.');
-    if (password.length < 6) return setError('Password must be at least 6 characters.');
+    if (password.length < 8) return setError('Password must be at least 8 characters.');
     if (!ageConfirmed) return setError('Please confirm you are 18 or older.');
 
     setLoading(true);
@@ -45,7 +45,7 @@ export default function Signup() {
         <input className="field" type="email" placeholder="you@university.edu" value={email} onChange={e => setEmail(e.target.value)} />
 
         <label className="field-label">Password</label>
-        <input className="field" type="password" placeholder="At least 6 characters" value={password} onChange={e => setPassword(e.target.value)} />
+        <input className="field" type="password" placeholder="At least 8 characters" value={password} onChange={e => setPassword(e.target.value)} />
 
         <label className="field-label">I am a...</label>
         <div className="role-row">

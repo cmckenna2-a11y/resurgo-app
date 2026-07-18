@@ -1,19 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
+import { localDateStr } from '../../lib/dates';
+import { COLLEGE_RESOURCES } from '../../data/collegeResources';
 
-// Returns YYYY-MM-DD in the user's LOCAL timezone (not UTC). Using
-// toISOString() rolled the "day" over at UTC midnight, which is early evening
-// in the US — causing the check-in day to flip hours before the user's actual
-// midnight. This computes the local calendar date instead.
-function localDateStr(d = new Date()) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-const MOOD_MAP = { '😔': 1, '😐': 2, '🙂': 3, '😊': 4, '😁': 5 };
 const MOODS = [
   { emoji: '😔', label: 'rough', value: 1 },
   { emoji: '😐', label: 'meh', value: 2 },
@@ -21,19 +11,6 @@ const MOODS = [
   { emoji: '😊', label: 'good', value: 4 },
   { emoji: '😁', label: 'great', value: 5 },
 ];
-
-const COLLEGE_RESOURCES = {
-  'Bates College': {
-    name: 'Bates College', color: '#8B0000',
-    resources: [
-      { title: 'CAPS — Counseling & Psychological Services', sub: 'Free confidential counseling — same day appointments available', url: 'https://www.bates.edu/counseling-psychological-services/', icon: '🧠' },
-      { title: 'Student Well-Being at Bates', sub: 'Wellness programs, resources, and holistic health support', url: 'https://www.bates.edu/well-being/', icon: '🌿' },
-      { title: 'Student Affairs', sub: 'Comprehensive support for your Bates journey', url: 'https://www.bates.edu/student-affairs/', icon: '🏫' },
-      { title: 'Here to Help — Confidential Support', sub: 'Full list of confidential mental health resources at Bates', url: 'https://www.bates.edu/here-to-help/confidential-non-confidential-support/', icon: '👥' },
-      { title: 'Crisis support — Campus Safety', sub: 'Call (207) 786-6254 anytime — 24/7', url: 'tel:+12077866254', icon: '📞' },
-    ],
-  },
-};
 
 function CrisisOverlay({ onClose }) {
   return (
@@ -95,52 +72,58 @@ export default function HomeTab({ active, onNavigate }) {
   async function selectMood(value) {
     setSelectedMood(value);
     const today = localDateStr();
+    // Optimistic update — reflect the tap immediately without waiting for the
+    // save round-trip, then fire-and-forget the network write.
+    const next = [{ mood: value, date: today }, ...moodHistory.filter(e => e.date !== today)];
+    setMoodHistory(next);
+    // Crisis detection runs on the local state so we need no second API call.
+    // Trigger on 3 consecutive CALENDAR DAYS at "rough" ending today — not
+    // just the last 3 entries, which could be spread weeks apart.
+    const byDate = new Map(next.map(e => [e.date, e.mood]));
+    let roughStreak = 0;
+    for (let i = 0; i < 3; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      if (byDate.get(localDateStr(d)) === 1) roughStreak++;
+      else break;
+    }
+    if (roughStreak >= 3) setTimeout(() => setShowCrisis(true), 400);
     try {
       await api.moods.save(value, today);
-      const updated = await api.moods.list();
-      setMoodHistory(updated || []);
-
-      // Crisis detection: 3+ consecutive rough days
-      const sorted = [...updated].sort((a, b) => b.date.localeCompare(a.date));
-      let roughStreak = 0;
-      for (const entry of sorted) {
-        if (entry.mood === 1) roughStreak++;
-        else break;
-      }
-      if (roughStreak >= 3) setTimeout(() => setShowCrisis(true), 400);
     } catch {}
   }
 
-  // Compute streak
-  const today = localDateStr();
-  let streak = 0;
-  for (let i = 0; i < 30; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const ds = localDateStr(d);
-    if (moodHistory.find(e => e.date === ds)) streak++;
-    else break;
-  }
+  const { streak, checkedInToday, smartCards } = useMemo(() => {
+    const today = localDateStr();
+    let streak = 0;
+    for (let i = 0; i < 30; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const ds = localDateStr(d);
+      if (moodHistory.find(e => e.date === ds)) streak++;
+      else break;
+    }
+    const checkedInToday = !!moodHistory.find(e => e.date === today);
+    const recent = moodHistory.slice(0, 3).map(e => e.mood);
+    const lowMoods = recent.filter(m => m <= 2).length;
+    const highMoods = recent.filter(m => m >= 4).length;
 
-  const checkedInToday = !!moodHistory.find(e => e.date === today);
-  const recent = moodHistory.slice(0, 3).map(e => e.mood);
-  const lowMoods = recent.filter(m => m <= 2).length;
-  const highMoods = recent.filter(m => m >= 4).length;
-
-  const smartCards = [];
-  if (lowMoods >= 2) {
-    smartCards.push({ title: '4-7-8 breathing', badge: '3 min', sub: 'Calm your nervous system right now', action: () => onNavigate('tools') });
-    smartCards.push({ title: 'Guided journal', badge: 'Reflect', badgeCls: '', sub: 'Writing helps process what you\'re carrying', action: () => onNavigate('journal') });
-    smartCards.push({ title: 'Peer support', badge: 'Connect', badgeCls: 'purple', sub: 'Read stories from people who get it', action: () => onNavigate('connect') });
-  } else if (highMoods >= 2 || streak >= 5) {
-    if (isAthlete) smartCards.push({ title: 'Pre-game mental prep', badge: 'Athlete', badgeCls: 'purple', sub: 'Faith-personalized 6-step routine', action: () => onNavigate('tools') });
-    else smartCards.push({ title: 'Exam anxiety toolkit', badge: 'Student', badgeCls: '', sub: 'Step-by-step guide for every exam phase', action: () => onNavigate('tools') });
-    smartCards.push({ title: 'Guided journal', badge: 'Reflect', badgeCls: '', sub: 'Prompts personalized to you', action: () => onNavigate('journal') });
-  } else {
-    smartCards.push({ title: '4-7-8 breathing', badge: '3 min', badgeCls: '', sub: 'Calm your nervous system instantly', action: () => onNavigate('tools') });
-    smartCards.push({ title: 'Peer support', badge: 'Connect', badgeCls: 'purple', sub: 'Read stories from people who get it', action: () => onNavigate('connect') });
-    smartCards.push({ title: 'Guided journal', badge: 'Reflect', badgeCls: '', sub: 'Prompts personalized to you', action: () => onNavigate('journal') });
-  }
+    const smartCards = [];
+    if (lowMoods >= 2) {
+      smartCards.push({ title: '4-7-8 breathing', badge: '3 min', sub: 'Calm your nervous system right now', action: () => onNavigate('tools') });
+      smartCards.push({ title: 'Guided journal', badge: 'Reflect', badgeCls: '', sub: "Writing helps process what you're carrying", action: () => onNavigate('journal') });
+      smartCards.push({ title: 'Peer support', badge: 'Connect', badgeCls: 'purple', sub: 'Read stories from people who get it', action: () => onNavigate('connect') });
+    } else if (highMoods >= 2 || streak >= 5) {
+      if (isAthlete) smartCards.push({ title: 'Pre-game mental prep', badge: 'Athlete', badgeCls: 'purple', sub: 'Faith-personalized 6-step routine', action: () => onNavigate('tools') });
+      else smartCards.push({ title: 'Exam anxiety toolkit', badge: 'Student', badgeCls: '', sub: 'Step-by-step guide for every exam phase', action: () => onNavigate('tools') });
+      smartCards.push({ title: 'Guided journal', badge: 'Reflect', badgeCls: '', sub: 'Prompts personalized to you', action: () => onNavigate('journal') });
+    } else {
+      smartCards.push({ title: '4-7-8 breathing', badge: '3 min', badgeCls: '', sub: 'Calm your nervous system instantly', action: () => onNavigate('tools') });
+      smartCards.push({ title: 'Peer support', badge: 'Connect', badgeCls: 'purple', sub: 'Read stories from people who get it', action: () => onNavigate('connect') });
+      smartCards.push({ title: 'Guided journal', badge: 'Reflect', badgeCls: '', sub: 'Prompts personalized to you', action: () => onNavigate('journal') });
+    }
+    return { streak, checkedInToday, smartCards };
+  }, [moodHistory, isAthlete, onNavigate]);
 
   return (
     <>
@@ -168,7 +151,7 @@ export default function HomeTab({ active, onNavigate }) {
           <div className="streak-label">{streak}-day check-in streak</div>
           <div className="streak-dots">
             {Array.from({ length: Math.min(streak, 7) }, (_, i) => (
-              <div key={i} className={`streak-dot${i >= streak ? ' empty' : ''}`} />
+              <div key={i} className="streak-dot" />
             ))}
             {Array.from({ length: Math.max(0, 7 - streak) }, (_, i) => (
               <div key={`e${i}`} className="streak-dot empty" />

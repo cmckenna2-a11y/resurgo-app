@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import HomeTab from './HomeTab';
 import ToolsTab from './ToolsTab';
@@ -10,20 +10,30 @@ function getInitials(name = '') {
   return name.trim().split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 }
 
+// Static — defined once, never rebuilt on render.
+const TABS = [
+  { id: 'home', label: 'Home' },
+  { id: 'tools', label: 'Tools' },
+  { id: 'journal', label: 'Journal' },
+  { id: 'connect', label: 'Connect' },
+  { id: 'you', label: 'You' },
+];
+
 export default function AppShell() {
   const { profile } = useAuth();
   const [activeTab, setActiveTab] = useState('home');
+  // Lazy-mount: only render a tab's component the first time it becomes active.
+  // Subsequent visits keep it mounted (preserving state) but CSS hides it.
+  // This eliminates 4 background tab mounts + their API calls on startup.
+  const [mounted, setMounted] = useState({ home: true });
 
-  const firstName = profile?.name?.split(' ')[0] || '';
-  const initials = getInitials(profile?.name);
+  const firstName = useMemo(() => profile?.name?.split(' ')[0] || '', [profile?.name]);
+  const initials = useMemo(() => getInitials(profile?.name), [profile?.name]);
 
-  const tabs = [
-    { id: 'home', label: 'Home' },
-    { id: 'tools', label: 'Tools' },
-    { id: 'journal', label: 'Journal' },
-    { id: 'connect', label: 'Connect' },
-    { id: 'you', label: 'You' },
-  ];
+  const navigate = useCallback((tab) => {
+    setMounted(m => ({ ...m, [tab]: true }));
+    setActiveTab(tab);
+  }, []);
 
   return (
     <div className="phone">
@@ -32,31 +42,31 @@ export default function AppShell() {
           <div className="header-title">Resurgo</div>
           <div className="header-sub">Hello, {firstName} 👋</div>
         </div>
-        <div className="avatar" onClick={() => setActiveTab('you')} title="Profile">{initials}</div>
+        <div className="avatar" onClick={() => navigate('you')} title="Profile">{initials}</div>
       </div>
 
       <div className="nav">
-        {tabs.map(t => (
-          <button key={t.id} className={`nav-btn${activeTab === t.id ? ' active' : ''}`} onClick={() => setActiveTab(t.id)}>
+        {TABS.map(t => (
+          <button key={t.id} className={`nav-btn${activeTab === t.id ? ' active' : ''}`} onClick={() => navigate(t.id)}>
             {t.label}
           </button>
         ))}
       </div>
 
       <div className={`tab${activeTab === 'home' ? ' active' : ''}`} id="tab-home">
-        <HomeTab active={activeTab === 'home'} onNavigate={setActiveTab} />
+        {mounted.home && <HomeTab active={activeTab === 'home'} onNavigate={navigate} />}
       </div>
       <div className={`tab${activeTab === 'tools' ? ' active' : ''}`} id="tab-tools">
-        <ToolsTab active={activeTab === 'tools'} />
+        {mounted.tools && <ToolsTab active={activeTab === 'tools'} />}
       </div>
       <div className={`tab${activeTab === 'journal' ? ' active' : ''}`} id="tab-journal">
-        <JournalTab active={activeTab === 'journal'} />
+        {mounted.journal && <JournalTab active={activeTab === 'journal'} />}
       </div>
       <div className={`tab${activeTab === 'connect' ? ' active' : ''}`} id="tab-connect">
-        <ConnectTab active={activeTab === 'connect'} />
+        {mounted.connect && <ConnectTab active={activeTab === 'connect'} />}
       </div>
       <div className={`tab${activeTab === 'you' ? ' active' : ''}`} id="tab-you">
-        <YouTab active={activeTab === 'you'} />
+        {mounted.you && <YouTab active={activeTab === 'you'} />}
       </div>
     </div>
   );

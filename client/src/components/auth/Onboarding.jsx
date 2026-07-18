@@ -67,6 +67,19 @@ export default function Onboarding() {
     navigate('/', { replace: true });
   }
 
+  async function skip() {
+    // Mark onboarding as skipped — without this, App.jsx sees no 'struggle'
+    // answer and bounces the user right back here. Wait for the profile
+    // state to update (capped) so the redirect gate sees the new value.
+    try {
+      await Promise.race([
+        updateProfile({ onboarding: { ...answers, skipped: true } }),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000)),
+      ]);
+    } catch {}
+    navigate('/', { replace: true });
+  }
+
   if (!current) return null;
 
   return (
@@ -75,7 +88,7 @@ export default function Onboarding() {
         <div style={{ marginBottom: '1rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <span style={{ fontSize: 12, color: '#aaa' }}>{step + 1} of {total}</span>
-            <button onClick={() => { updateProfile({ onboarding: answers }); navigate('/'); }} style={{ fontSize: 12, color: '#aaa', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Skip</button>
+            <button onClick={skip} style={{ fontSize: 12, color: '#aaa', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Skip</button>
           </div>
           <div style={{ height: 4, background: '#f0f0ec', borderRadius: 2 }}>
             <div style={{ height: 4, background: '#1D9E75', borderRadius: 2, width: `${pct}%`, transition: 'width 0.3s' }} />

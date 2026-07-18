@@ -25,10 +25,28 @@ async function apiFetch(path, options = {}) {
   return res.json();
 }
 
+let moodsCache = null;
+let moodsCacheAt = 0;
+const MOODS_TTL = 60_000;
+
+// Must be called whenever the signed-in user changes (logout / new login) —
+// otherwise the next user on the same device can see the previous user's
+// mood history until the TTL expires.
+export function clearApiCache() {
+  moodsCache = null;
+  moodsCacheAt = 0;
+}
+
 export const api = {
   moods: {
-    list: () => apiFetch('/api/moods'),
-    save: (mood, date) => apiFetch('/api/moods', { method: 'POST', body: JSON.stringify({ mood, date }) }),
+    list: () => {
+      if (moodsCache && Date.now() - moodsCacheAt < MOODS_TTL) return Promise.resolve(moodsCache);
+      return apiFetch('/api/moods').then(d => { moodsCache = d; moodsCacheAt = Date.now(); return d; });
+    },
+    save: (mood, date) => {
+      moodsCache = null;
+      return apiFetch('/api/moods', { method: 'POST', body: JSON.stringify({ mood, date }) });
+    },
   },
   journals: {
     list: () => apiFetch('/api/journals'),

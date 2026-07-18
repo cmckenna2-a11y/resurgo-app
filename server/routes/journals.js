@@ -17,10 +17,17 @@ router.get('/', async (req, res) => {
   res.json(data);
 });
 
+const CATEGORIES = ['general', 'athlete', 'stress', 'gratitude'];
+
 router.post('/', async (req, res) => {
   const { category, prompt, content, closer } = req.body;
-  if (!category || !content?.trim()) {
+  if (typeof content !== 'string' || !content.trim() || !CATEGORIES.includes(category)) {
     return res.status(400).json({ error: 'category and content are required' });
+  }
+  if (prompt != null && typeof prompt !== 'string') return res.status(400).json({ error: 'Invalid prompt' });
+  if (closer != null && typeof closer !== 'string') return res.status(400).json({ error: 'Invalid closer' });
+  if (content.length > 10000 || (prompt?.length ?? 0) > 1000 || (closer?.length ?? 0) > 2000) {
+    return res.status(400).json({ error: 'Entry is too long' });
   }
 
   const { data, error } = await supabase

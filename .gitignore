@@ -5,3 +5,7 @@ dist/
 client/dist/
 .vercel/
 *.log
+.DS_Store
+index (34).html
+# Capacitor copies the built web app here on `cap sync` — build output, not source
+client/ios/App/App/public/

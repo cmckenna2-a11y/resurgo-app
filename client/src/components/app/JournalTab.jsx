@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { getFaithContent } from '../../data/faithContent';
@@ -35,6 +35,13 @@ function getPrompts(cat, faithContent) {
   return prompts[cat] || prompts.general;
 }
 
+const CATS = [
+  { id: 'general', label: 'Daily reflection', cls: 'teal' },
+  { id: 'athlete', label: 'Athlete mindset', cls: 'purple2' },
+  { id: 'stress', label: 'Stress & anxiety', cls: 'coral' },
+  { id: 'gratitude', label: 'Gratitude', cls: 'amber' },
+];
+
 export default function JournalTab() {
   const { profile } = useAuth();
   const [cat, setCat] = useState('general');
@@ -44,22 +51,27 @@ export default function JournalTab() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [crisisDetected, setCrisisDetected] = useState(false);
+  // Once the user has seen the crisis screen and chosen "Continue writing",
+  // let the save go through — otherwise an entry containing a flagged word
+  // (e.g. "hopeless") could never be saved at all.
+  const [crisisAcknowledged, setCrisisAcknowledged] = useState(false);
   const [saveError, setSaveError] = useState(false);
 
-  const faithContent = getFaithContent(profile?.onboarding);
-  const prompts = getPrompts(cat, faithContent);
-  const wordCount = entryText.trim().split(/\s+/).filter(Boolean).length;
+  const faithContent = useMemo(() => getFaithContent(profile?.onboarding), [profile?.onboarding]);
+  const prompts = useMemo(() => getPrompts(cat, faithContent), [cat, faithContent]);
+  const wordCount = useMemo(() => entryText.trim().split(/\s+/).filter(Boolean).length, [entryText]);
 
   function selectCat(c) {
     setCat(c);
     setSelectedPrompt(null);
     setEntryText('');
     setCloserText('');
+    setCrisisAcknowledged(false);
   }
 
   async function saveJournal() {
     const lower = `${entryText} ${closerText}`.toLowerCase();
-    if (CRISIS_WORDS.some(w => lower.includes(w))) {
+    if (!crisisAcknowledged && CRISIS_WORDS.some(w => lower.includes(w))) {
       setCrisisDetected(true);
       return;
     }
@@ -84,6 +96,7 @@ export default function JournalTab() {
   function reset() {
     setSaved(false);
     setCrisisDetected(false);
+    setCrisisAcknowledged(false);
     setCat('general');
     setSelectedPrompt(null);
     setEntryText('');
@@ -98,7 +111,7 @@ export default function JournalTab() {
         <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 20 }}>If you're going through something difficult, please reach out to someone who can help.</div>
         <a href="tel:988" style={{ display: 'block', padding: '13px 20px', background: 'var(--green-dark)', color: '#fff', borderRadius: 12, textDecoration: 'none', fontWeight: 700, fontSize: 15, marginBottom: 10 }}>Call or text 988</a>
         <a href="sms:741741" style={{ display: 'block', padding: '13px 20px', background: 'var(--warm-gray)', color: 'var(--text-primary)', borderRadius: 12, textDecoration: 'none', fontWeight: 600, fontSize: 14, border: '1.5px solid var(--border)', marginBottom: 16 }}>Text HOME to 741741</a>
-        <button onClick={() => setCrisisDetected(false)} style={{ fontSize: 13, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Continue writing</button>
+        <button onClick={() => { setCrisisDetected(false); setCrisisAcknowledged(true); }} style={{ fontSize: 13, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Continue writing</button>
       </div>
     );
   }
@@ -113,13 +126,6 @@ export default function JournalTab() {
       </div>
     );
   }
-
-  const CATS = [
-    { id: 'general', label: 'Daily reflection', cls: 'teal' },
-    { id: 'athlete', label: 'Athlete mindset', cls: 'purple2' },
-    { id: 'stress', label: 'Stress & anxiety', cls: 'coral' },
-    { id: 'gratitude', label: 'Gratitude', cls: 'amber' },
-  ];
 
   return (
     <>

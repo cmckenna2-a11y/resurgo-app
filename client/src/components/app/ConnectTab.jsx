@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import { PEER_SITUATIONS, PEER_STORIES } from '../../data/peerStories';
@@ -168,7 +168,7 @@ function ShareSection() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const wordCount = story.trim().split(/\s+/).filter(Boolean).length;
+  const wordCount = useMemo(() => story.trim().split(/\s+/).filter(Boolean).length, [story]);
 
   const SITUATIONS = ['exam', 'burnout', 'injury', 'slump', 'lonely', 'identity', 'pressure', 'anxiety'];
   const SITUATION_LABELS = { exam: 'Exam anxiety', burnout: 'Burnout', injury: 'Injury recovery', slump: 'Performance slump', lonely: 'Loneliness', identity: 'Identity & purpose', pressure: 'Social pressure', anxiety: 'Anxiety' };
